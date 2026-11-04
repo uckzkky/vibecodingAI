@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.pyc
+*.py[cod]
+*$py.class
+*.pyo
+.Python
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# 密钥
+.env
+*.key
+credentials.json
+
+# 模型权重
+*.pt
+*.pth
+*.ckpt
+*.cbm
+*.safetensors
+*.onnx
+*.h5
+*.pb
+*.tflite
+weights/
+checkpoints/
+models/weights/
+pretrained/
+
+# 大数据 / 实验输出
+*.csv
+*.parquet
+*.npy
+*.npz
+*.hdf5
+*.bin
+*.pkl
+*.pickle
+*.feather
+*_logs/
+*_predictions/
+data/raw/
+src/data/inbox/
+data/processed/
+datasets/
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
+
+# Office 临时锁文件
+~$*
+
+# 系统 / IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.log
+*.tmp
+*.swp
+
+# 单次运行报告（本地生成，不提交）
+src/output/*
+!src/output/.gitkeep
+
+# UI 跑图 / 设计工具缓存（不影响运行）
+.taste-skill/
+.cursor/skills/
+.cursor/mcp.json

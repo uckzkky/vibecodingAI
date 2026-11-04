@@ -1,0 +1,11 @@
+httpx>=0.27
+beautifulsoup4>=4.12
+pydantic>=2.7
+mcp>=1.9
+ddgs>=9.0
+torch>=2.2
+transformers>=4.44
+soundfile>=0.12
+miniaudio>=1.61
+pycryptodome>=3.20
+jieba>=0.42

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vibe乐评</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* 1440 窗口里内容列 1120 = 主栏 722 + 间距 14 + 侧栏 384。卡片靠明度分层，没有描边和阴影。 */
+    :root {
+      --ground: #000000;
+      --surface: #111111;
+      --raised: #2a2a2a;
+      --rule: #161616;
+      --control: #444444;
+      --text: #ffffff;
+      --muted: #b4b4b4;
+      --faint: #949494;
+      --accent: #c6f24e;
+      --negative: #e5484d;
+      --font: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      --column: 1120px;
+      --rail: 384px;
+      --gap: 14px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--ground); color: var(--text); }
+    body { font: 400 14px/20px var(--font); }
+    button, textarea { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .num { font-variant-numeric: tabular-nums; }
+    .topbar { position: sticky; top: 0; z-index: 2; height: 48px; background: var(--ground); }
+    .topbar { border-bottom: 1px solid var(--rule); }
+    .column { width: min(var(--column), calc(100% - 32px)); margin: 0 auto; }
+    .bar-inner, .title-row, .query-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .bar-inner { height: 48px; }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+    .status { color: var(--muted); font-size: 14px; }
+    .canvas { padding: 22px 0 48px; }
+    .title-row { align-items: flex-end; margin-bottom: 16px; }
+    h1 { margin: 0; font-size: 20px; font-weight: 600; line-height: 28px; }
+    .finding { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+    .query { background: var(--surface); border-radius: 20px; padding: 16px; }
+    .query label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 13px; }
+    textarea {
+      width: 100%; min-height: 96px; resize: vertical; border: 1px solid var(--control);
+      border-radius: 12px; background: var(--ground); padding: 10px 12px; line-height: 22px;
+    }
+    textarea::placeholder { color: var(--faint); }
+    .query-row { align-items: center; margin-top: 12px; }
+    .error { margin: 0; color: var(--negative); font-size: 13px; }
+    button.primary {
+      height: 36px; padding: 0 16px; border: 0; border-radius: 999px;
+      background: #fff; color: #000; font-weight: 600; cursor: pointer;
+    }
+    button.primary:disabled { background: var(--raised); color: var(--muted); cursor: not-allowed; }
+    .board { display: grid; grid-template-columns: minmax(0, 1fr) var(--rail); gap: var(--gap); margin-top: 14px; align-items: start; }
+    .stack { display: flex; flex-direction: column; gap: var(--gap); }
+    .panel { background: var(--surface); border-radius: 20px; padding: 22px; }
+    .panel h2, .rail h2 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+    .note, .meta { margin: 0; color: var(--faint); font-size: 13px; }
+    .kpis { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border-radius: 20px; }
+    .kpi { padding: 16px 18px; }
+    .kpi + .kpi { border-left: 1px solid var(--rule); }
+    .kpi span { display: block; color: var(--muted); font-size: 14px; }
+    .kpi strong { display: block; margin-top: 4px; font-size: 24px; font-weight: 500; font-variant-numeric: tabular-nums; }
+    .kpi em { display: block; margin-top: 4px; color: var(--faint); font-size: 13px; font-style: normal; }
+    .cloud { display: flex; flex-direction: column; gap: 18px; }
+    .platform-name { margin: 0 0 8px; color: var(--faint); font-size: 13px; }
+    .words { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+    .words span { font-weight: 500; line-height: 1; }
+    .bars { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+    .bar { display: grid; grid-template-columns: 88px 1fr 36px; gap: 12px; align-items: center; font-size: 14px; }
+    .track { height: 8px; background: var(--raised); border-radius: 999px; overflow: hidden; }
+    .fill { height: 100%; background: var(--accent); }
+    .review { white-space: pre-wrap; font-size: 14px; line-height: 24px; }
+    .caret { color: var(--text); }
+    .rail h2 { margin: 0 0 8px; }
+    .steps { max-height: 560px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+    .steps li { display: grid; grid-template-columns: 64px 36px minmax(0, 1fr); gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--rule); font-size: 13px; line-height: 20px; }
+    .steps li.span, .steps li:empty { display: block; border-bottom: 0; }
+    .steps time, .kind { color: var(--faint); }
+    .steps .on { color: var(--text); }
+    .empty, .loading-line { color: var(--faint); font-size: 14px; }
+    .bone { height: 14px; background: var(--raised); border-radius: 4px; }
+    .bone.tall { height: 72px; }
+    .legend { margin-top: 14px; color: var(--faint); font-size: 13px; line-height: 20px; }
+    @media (max-width: 900px) {
+      .board, .kpis { grid-template-columns: 1fr; }
+      .kpi + .kpi { border-left: 0; border-top: 1px solid var(--rule); }
+      .query-row { align-items: stretch; flex-direction: column; }
+      button.primary { height: 44px; }
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.10/babel.min.js" crossorigin></script>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    function uniqueWords(words) {
+      const seen = new Set();
+      const out = [];
+      (words || []).forEach((item) => {
+        const text = typeof item === "string" ? item : item.text;
+        const count = typeof item === "string" ? 1 : (item.count || item.weight || 1);
+        const key = String(text || "").trim().toLowerCase();
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        out.push({ text, count });
+      });
+      return out;
+    }
+
+    function signalColor(weight) {
+      const t = Math.max(0, Math.min(1, weight));
+      const from = [107, 107, 107];
+      const to = [198, 242, 78];
+      const rgb = from.map((channel, index) => Math.round(channel + (to[index] - channel) * t));
+      return `rgb(${rgb.join(",")})`;
+    }
+
+    function measures(data) {
+      const platforms = data?.sentiment || [];
+      const words = (data?.platformWords || []).reduce((sum, group) => sum + (group.words || []).length, 0);
+      const lead = platforms.reduce((best, row) => (best == null || row.score > best.score ? row : best), null);
+      return {
+        platforms: data ? platforms.length : null,
+        words: data ? words : null,
+        lead,
+      };
+    }
+
+    function stamp() {
+      return new Date().toLocaleTimeString("zh-CN", { hour12: false });
+    }
+
+    function inferTool(text) {
+      if (/不查厂牌|只给了歌手或歌曲/.test(text)) return "catalog";
+      if (/网易云|豆瓣和哔哩|听众评论/.test(text)) return "social_cloud";
+      if (/影音|测评/.test(text)) return "find_video_reviews";
+      if (/专业乐评/.test(text)) return "analyze_criticism";
+      if (/厂牌|录音|Discogs/.test(text)) return "lookup_catalog";
+      if (/阅读|文章|对不上/.test(text)) return "fetch_page";
+      if (/创作|采访|MV|检索/.test(text)) return "search_web";
+      if (/AI 写乐评|DeepSeek|综述模型/.test(text)) return "deepseek";
+      return "agent";
+    }
+
+    function classifyStatus(text) {
+      if (/正在用 AI|写成综述|DeepSeek/.test(text)) {
+        return { action: "llm_thought", name: "deepseek", detail: text };
+      }
+      if (/^正在|^开始|^检索/.test(text)) {
+        return { action: "tool_call", name: inferTool(text), detail: text };
+      }
+      return { action: "observation", name: inferTool(text), detail: text };
+    }
+
+    function toResult(report) {
+      const cloud = report.cloud || {};
+      const words = (cloud.words || []).slice(0, 28).map((item) => ({
+        text: item.text,
+        weight: item.score || item.count || 1,
+      }));
+      const hidden = new Set(["微博", "知乎"]);
+      const sentiment = (cloud.sentiment || [])
+        .filter((row) => !hidden.has(row.platform))
+        .map((row) => ({ platform: row.platform, score: row.score }));
+      return {
+        title: report.song ? `《${report.song}》 ${report.artist || ""}`.trim() : (report.artist || "乐评"),
+        platformWords: (cloud.platformClouds || []).filter((group) => !hidden.has(group.platform)).map((group) => ({
+          platform: group.platform,
+          words: uniqueWords(group.words),
+        })),
+        sentiment,
+        listenerNote: cloud.error || (!words.length ? (cloud.note || "") : ""),
+        review: report.aiReview?.text || report.aiReview?.note || "这次没有生成乐评正文。",
+      };
+    }
+
+    function useAgentWorkbench() {
+      const [userInput, setUserInput] = useState("");
+      const [agentSteps, setAgentSteps] = useState([]);
+      const [resultData, setResultData] = useState(null);
+      const [isGenerating, setIsGenerating] = useState(false);
+      const [mode, setMode] = useState("");
+      const [errorText, setErrorText] = useState("");
+      const runId = useRef(0);
+
+      const pushStep = useCallback((step) => {
+        setAgentSteps((prev) => [
+          ...prev,
+          { id: `${Date.now()}-${prev.length}`, at: stamp(), ...step },
+        ]);
+      }, []);
+
+      const resetRun = useCallback(() => {
+        runId.current += 1;
+        setAgentSteps([]);
+        setResultData(null);
+        setErrorText("");
+        setIsGenerating(true);
+      }, []);
+
+      const runLive = useCallback(async () => {
+        const text = userInput.trim();
+        if (!text || isGenerating) return;
+        const id = runId.current + 1;
+        resetRun();
+        setMode("实时");
+        pushStep({
+          action: "llm_thought",
+          name: "planner",
+          detail: `收到查询「${text}」，开始按工具链检索。`,
+        });
+        const body = new FormData();
+        body.append("text", text);
+        try {
+          const response = await fetch("/api/ask", { method: "POST", body });
+          if (!response.ok || !response.body) throw new Error("没有连上本地服务");
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (runId.current !== id) return;
+            buffer += decoder.decode(value, { stream: true });
+            const chunks = buffer.split("\n\n");
+            buffer = chunks.pop() || "";
+            for (const chunk of chunks) {
+              const line = chunk.split("\n").find((item) => item.startsWith("data: "));
+              if (!line) continue;
+              const event = JSON.parse(line.slice(6));
+              if (event.type === "status") {
+                const step = classifyStatus(event.text || "");
+                pushStep(step);
+              } else if (event.type === "need" || event.type === "error") {
+                setErrorText(event.text || "查询失败");
+                pushStep({ action: "observation", name: "agent", detail: event.text || "查询失败" });
+              } else if (event.type === "report") {
+                setResultData(toResult(event.report || {}));
+              }
+            }
+          }
+        } catch (error) {
+          if (runId.current !== id) return;
+          const message = error instanceof TypeError ? "没有连上本地服务，或服务在查询途中重启了。" : error.message;
+          setErrorText(message);
+          pushStep({ action: "observation", name: "agent", detail: message });
+        } finally {
+          if (runId.current === id) setIsGenerating(false);
+        }
+      }, [userInput, isGenerating, pushStep, resetRun]);
+
+      return {
+        userInput,
+        setUserInput,
+        agentSteps,
+        resultData,
+        isGenerating,
+        mode,
+        errorText,
+        runLive,
+      };
+    }
+
+    function actionLabel(action) {
+      if (action === "tool_call") return "CALL";
+      if (action === "llm_thought") return "LLM";
+      return "OBS";
+    }
+
+    function ExecutionTrace({ steps, isGenerating }) {
+      const endRef = useRef(null);
+      const latest = steps[steps.length - 1];
+      useEffect(() => {
+        endRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }, [steps.length, isGenerating]);
+      return (
+        <div>
+          <h2>检索轨迹</h2>
+          <p className="meta">{steps.length} 步{isGenerating ? " · 正在检索" : ""}</p>
+          <ol className="steps">
+            {steps.length === 0 && <li className="span">等待查询。状态会写成 CALL、OBS 或 LLM。</li>}
+            {steps.map((step, index) => {
+              const active = isGenerating && index === steps.length - 1;
+              return (
+                <li key={step.id} className={active ? "on" : ""}>
+                  <time className="num">{step.at}</time>
+                  <span className="kind">{actionLabel(step.action)}</span>
+                  <span>{step.name} · {step.detail}</span>
+                </li>
+              );
+            })}
+            {isGenerating && (
+              <li className="on">
+                <time />
+                <span className="kind">···</span>
+                <span>{latest ? `正在处理 ${latest.name}` : "正在启动"}</span>
+              </li>
+            )}
+            <li ref={endRef} />
+          </ol>
+          <p className="legend">CALL 发起抓取或检索。OBS 是工具返回。LLM 规划或写乐评。</p>
+        </div>
+      );
+    }
+
+    function PlatformWordsCard({ groups, note, loading }) {
+      const list = groups || [];
+      return (
+        <section className="panel">
+          <h2>各平台词云</h2>
+          <p className="note">字越大、越接近黄绿，出现次数越多。每个词只出现一次。</p>
+          {loading && <div className="bone tall" style={{ marginTop: 16 }} />}
+          {!loading && list.length === 0 && <p className="empty">{note || "还没有听众原话。"}</p>}
+          <div className="cloud">
+            {list.map((group) => {
+              const words = uniqueWords(group.words);
+              const max = Math.max(1, ...words.map((item) => item.count));
+              return (
+                <div key={group.platform}>
+                  <p className="platform-name">{group.platform}</p>
+                  <div className="words">
+                    {words.map((item) => {
+                      const weight = item.count / max;
+                      return (
+                        <span key={item.text} title={`${item.count} 次`} style={{ fontSize: `${Math.round(13 + Math.sqrt(weight) * 26)}px`, color: signalColor(weight) }}>
+                          {item.text}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      );
+    }
+
+    function SentimentCard({ rows, loading }) {
+      return (
+        <section className="panel">
+          <h2>情感对比</h2>
+          <p className="note">分数是表态评论里的褒义占比。没有褒贬词时，回退到净值，0 到 100。</p>
+          {loading && <div className="bone" style={{ marginTop: 16, width: "70%" }} />}
+          {!loading && rows.length === 0 && <p className="empty">样本不够，还画不出平台对比。</p>}
+          <div className="bars">
+            {rows.map((row) => (
+              <div key={row.platform} className="bar">
+                <span>{row.platform}</span>
+                <div className="track">
+                  <div className="fill" style={{ width: `${Math.max(0, Math.min(100, row.score))}%` }} />
+                </div>
+                <span className="num">{row.score}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+    }
+
+    function ReviewCard({ text, loading }) {
+      const [count, setCount] = useState(0);
+      useEffect(() => {
+        setCount(0);
+        if (!text) return undefined;
+        let index = 0;
+        const timer = setInterval(() => {
+          index += 2;
+          setCount(index);
+          if (index >= text.length) clearInterval(timer);
+        }, 16);
+        return () => clearInterval(timer);
+      }, [text]);
+      const shown = (text || "").slice(0, count);
+      return (
+        <section className="panel">
+          <h2>乐评</h2>
+          {loading && <div className="bone tall" style={{ marginTop: 16 }} />}
+          {!loading && (
+            <p className="review">
+              {shown || "乐评会写在这里。"}
+              {text && count < text.length ? <span className="caret">▍</span> : null}
+            </p>
+          )}
+        </section>
+      );
+    }
+
+    function KpiStrip({ data, loading }) {
+      const stats = measures(data);
+      const cells = [
+        ["平台", stats.platforms == null ? "—" : stats.platforms, "进入情感对比的平台数"],
+        ["词", stats.words == null ? "—" : stats.words, "各平台词云里的词数"],
+        ["最高表态", stats.lead ? stats.lead.score : "—", stats.lead ? `${stats.lead.platform}，褒义占表态` : "还没有表态样本"],
+      ];
+      return (
+        <div className="kpis">
+          {cells.map(([label, value, caption]) => (
+            <div className="kpi" key={label}>
+              <span>{label}</span>
+              {loading ? <div className="bone" style={{ marginTop: 8, width: 48, height: 24 }} /> : <strong>{value}</strong>}
+              <em>{caption}</em>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    function App() {
+      const agent = useAgentWorkbench();
+      const data = agent.resultData;
+      const stats = measures(data);
+      const finding = stats.lead
+        ? `听众表态最偏褒义的是${stats.lead.platform}，${stats.lead.score}。`
+        : "输入歌手，或厂牌旗下的歌手。检索之后，这里写听众把作品说成了什么。";
+      return (
+        <div>
+          <header className="topbar">
+            <div className="column bar-inner">
+              <div className="brand">
+                <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M2 13V9M6 13V4M10 13V7M14 13V10" fill="none" stroke="#c6f24e" strokeWidth="1.5" />
+                </svg>
+                <span>vibe乐评</span>
+              </div>
+              <span className="status">{agent.isGenerating ? "执行中" : agent.mode || "空闲"}</span>
+            </div>
+          </header>
+          <main className="column canvas">
+            <div className="title-row">
+              <div>
+                <h1>{data?.title || "听众怎么说"}</h1>
+                <p className="finding">{finding}</p>
+              </div>
+            </div>
+            <section className="query">
+              <label htmlFor="query">查询</label>
+              <textarea
+                id="query"
+                value={agent.userInput}
+                onChange={(event) => agent.setUserInput(event.target.value)}
+                rows={4}
+                placeholder="例如：lufive的《2008》，或 厂牌名旗下的歌手"
+              />
+              <div className="query-row">
+                {agent.errorText ? <p className="error">{agent.errorText}</p> : <p className="note">一句即可：歌手，歌手的《歌名》，或厂牌旗下的歌手。</p>}
+                <button type="button" className="primary" disabled={agent.isGenerating || !agent.userInput.trim()} onClick={agent.runLive}>
+                  开始检索
+                </button>
+              </div>
+            </section>
+            <div className="board">
+              <div className="stack">
+                <KpiStrip data={data} loading={agent.isGenerating && !data} />
+                <PlatformWordsCard groups={data?.platformWords || []} note={data?.listenerNote || ""} loading={agent.isGenerating && !data} />
+                <SentimentCard rows={data?.sentiment || []} loading={agent.isGenerating && !data} />
+                <ReviewCard text={data?.review || ""} loading={agent.isGenerating && !data} />
+              </div>
+              <aside className="rail">
+                <ExecutionTrace steps={agent.agentSteps} isGenerating={agent.isGenerating} />
+              </aside>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
