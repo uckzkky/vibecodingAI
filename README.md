@@ -11,10 +11,14 @@
 ### 1. 环境
 
 ```bash
-cd d:\vibecodingAI
+git clone https://github.com/<你的用户名>/vibecodingAI.git
+cd vibecodingAI
 python -m venv .venv
 .venv\Scripts\pip install -r requirements.txt
+copy .cursor\mcp.json.example .cursor\mcp.json
 ```
+
+按本机路径修改 `.cursor/mcp.json` 里的 Python 与 `mcp_server.py` 位置（示例文件里是 Windows 绝对路径）。
 
 ### 2. 配置模型（AI 乐评必需）
 
