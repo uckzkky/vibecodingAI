@@ -70,12 +70,12 @@ def parse_request(text: str) -> tuple[str, str, str, str]:
     if titled:
         song = titled.group(1).strip()
         if _YEAR.fullmatch(song):
-            return "", "", "", "年份歌名请写成「歌手的《歌名》」。例如：lufive的《2008》。"
+            return "", "", "", "仅写年份容易被当成别的歌。请写成「歌手的《歌名》」，例如：lufive的《2008》。"
         return song, "", "", ""
     if _YEAR.fullmatch(raw):
         return "", "", "", "年份歌名请写成「歌手的《歌名》」。例如：lufive的《2008》。"
     if len(raw) > 80:
-        return "", "", "", "写一个歌手，或写成「歌手的《歌名》」，厂牌用「厂牌旗下的歌手」。"
+        return "", "", "", "输入过长。请只写歌手名，或「歌手的《歌名》」，或「某厂牌旗下的歌手」。"
     parts = raw.split(" ")
     if len(parts) == 2 and all(parts):
         if _YEAR.fullmatch(parts[0]):

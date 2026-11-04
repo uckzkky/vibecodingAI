@@ -180,7 +180,7 @@
         })),
         sentiment,
         listenerNote: cloud.error || (!words.length ? (cloud.note || "") : ""),
-        review: report.aiReview?.text || report.aiReview?.note || "这次没有生成乐评正文。",
+        review: report.aiReview?.text || report.aiReview?.note || "未能生成乐评正文。请检查 .env 是否已配置 DeepSeek 等模型的 API Key。",
       };
     }
 
@@ -213,17 +213,17 @@
         if (!text || isGenerating) return;
         const id = runId.current + 1;
         resetRun();
-        setMode("实时");
+        setMode("实时更新");
         pushStep({
           action: "llm_thought",
           name: "planner",
-          detail: `收到查询「${text}」，开始按工具链检索。`,
+          detail: `收到查询「${text}」，开始从各平台抓取材料并整理结果。`,
         });
         const body = new FormData();
         body.append("text", text);
         try {
           const response = await fetch("/api/ask", { method: "POST", body });
-          if (!response.ok || !response.body) throw new Error("没有连上本地服务");
+          if (!response.ok || !response.body) throw new Error("无法连接本地服务。请先运行：python src/web_app.py");
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
           let buffer = "";
@@ -251,7 +251,7 @@
           }
         } catch (error) {
           if (runId.current !== id) return;
-          const message = error instanceof TypeError ? "没有连上本地服务，或服务在查询途中重启了。" : error.message;
+          const message = error instanceof TypeError ? "无法连接本地服务，或服务在检索过程中被关闭。请重新运行 web_app.py 后再试。" : error.message;
           setErrorText(message);
           pushStep({ action: "observation", name: "agent", detail: message });
         } finally {
@@ -286,9 +286,9 @@
       return (
         <div>
           <h2>检索轨迹</h2>
-          <p className="meta">{steps.length} 步{isGenerating ? " · 正在检索" : ""}</p>
+          <p className="meta">{steps.length} 步{isGenerating ? " · 检索进行中" : ""}</p>
           <ol className="steps">
-            {steps.length === 0 && <li className="span">等待查询。状态会写成 CALL、OBS 或 LLM。</li>}
+            {steps.length === 0 && <li className="span">输入查询并点击「开始检索」后，这里会按时间显示每一步操作。</li>}
             {steps.map((step, index) => {
               const active = isGenerating && index === steps.length - 1;
               return (
@@ -308,7 +308,7 @@
             )}
             <li ref={endRef} />
           </ol>
-          <p className="legend">CALL 发起抓取或检索。OBS 是工具返回。LLM 规划或写乐评。</p>
+          <p className="legend">CALL：正在调用技能去抓数据。OBS：技能返回的结果摘要。LLM：大模型在写乐评或规划步骤。</p>
         </div>
       );
     }
@@ -318,9 +318,9 @@
       return (
         <section className="panel">
           <h2>各平台词云</h2>
-          <p className="note">字越大、越接近黄绿，出现次数越多。每个词只出现一次。</p>
+          <p className="note">听众评论里高频出现的词：字越大、颜色越亮，出现越多；每个词只显示一次。</p>
           {loading && <div className="bone tall" style={{ marginTop: 16 }} />}
-          {!loading && list.length === 0 && <p className="empty">{note || "还没有听众原话。"}</p>}
+          {!loading && list.length === 0 && <p className="empty">{note || "暂未抓到可用的听众评论，可换歌手或歌名重试。"}</p>}
           <div className="cloud">
             {list.map((group) => {
               const words = uniqueWords(group.words);
@@ -350,9 +350,9 @@
       return (
         <section className="panel">
           <h2>情感对比</h2>
-          <p className="note">分数是表态评论里的褒义占比。没有褒贬词时，回退到净值，0 到 100。</p>
+          <p className="note">0～100 分：在该平台评论中，带明确褒贬态度的句子里，褒义大致占多少。评论太少时不显示该平台。</p>
           {loading && <div className="bone" style={{ marginTop: 16, width: "70%" }} />}
-          {!loading && rows.length === 0 && <p className="empty">样本不够，还画不出平台对比。</p>}
+          {!loading && rows.length === 0 && <p className="empty">各平台评论量或情感词不足，暂时无法做平台间对比。</p>}
           <div className="bars">
             {rows.map((row) => (
               <div key={row.platform} className="bar">
@@ -388,7 +388,7 @@
           {loading && <div className="bone tall" style={{ marginTop: 16 }} />}
           {!loading && (
             <p className="review">
-              {shown || "乐评会写在这里。"}
+              {shown || "检索完成后，AI 将根据上方材料在这里撰写乐评。"}
               {text && count < text.length ? <span className="caret">▍</span> : null}
             </p>
           )}
@@ -399,9 +399,9 @@
     function KpiStrip({ data, loading }) {
       const stats = measures(data);
       const cells = [
-        ["平台", stats.platforms == null ? "—" : stats.platforms, "进入情感对比的平台数"],
-        ["词", stats.words == null ? "—" : stats.words, "各平台词云里的词数"],
-        ["最高表态", stats.lead ? stats.lead.score : "—", stats.lead ? `${stats.lead.platform}，褒义占表态` : "还没有表态样本"],
+        ["平台", stats.platforms == null ? "—" : stats.platforms, "参与情感对比的平台个数"],
+        ["词", stats.words == null ? "—" : stats.words, "词云中不重复的高频词数量"],
+        ["最高表态", stats.lead ? stats.lead.score : "—", stats.lead ? `${stats.lead.platform}：褒义倾向最高` : "暂无足够评论做情感统计"],
       ];
       return (
         <div className="kpis">
@@ -421,8 +421,8 @@
       const data = agent.resultData;
       const stats = measures(data);
       const finding = stats.lead
-        ? `听众表态最偏褒义的是${stats.lead.platform}，${stats.lead.score}。`
-        : "输入歌手，或厂牌旗下的歌手。检索之后，这里写听众把作品说成了什么。";
+        ? `当前材料里，${stats.lead.platform} 的听众整体更偏正面（情感分 ${stats.lead.score}/100）。`
+        : "输入歌手或「歌手的《歌名》」，检索完成后这里会概括听众主要在讨论什么。";
       return (
         <div>
           <header className="topbar">
@@ -433,13 +433,13 @@
                 </svg>
                 <span>vibe乐评</span>
               </div>
-              <span className="status">{agent.isGenerating ? "执行中" : agent.mode || "空闲"}</span>
+              <span className="status">{agent.isGenerating ? "检索中" : agent.mode || "就绪"}</span>
             </div>
           </header>
           <main className="column canvas">
             <div className="title-row">
               <div>
-                <h1>{data?.title || "听众怎么说"}</h1>
+                <h1>{data?.title || "开始一次乐评检索"}</h1>
                 <p className="finding">{finding}</p>
               </div>
             </div>
@@ -450,10 +450,10 @@
                 value={agent.userInput}
                 onChange={(event) => agent.setUserInput(event.target.value)}
                 rows={4}
-                placeholder="例如：lufive的《2008》，或 厂牌名旗下的歌手"
+                placeholder="例如：lufive的《2008》，或：某某厂牌旗下的歌手名"
               />
               <div className="query-row">
-                {agent.errorText ? <p className="error">{agent.errorText}</p> : <p className="note">一句即可：歌手，歌手的《歌名》，或厂牌旗下的歌手。</p>}
+                {agent.errorText ? <p className="error">{agent.errorText}</p> : <p className="note">用一句话即可：只写歌手名；或「歌手的《歌名》」；或「厂牌旗下的歌手」。</p>}
                 <button type="button" className="primary" disabled={agent.isGenerating || !agent.userInput.trim()} onClick={agent.runLive}>
                   开始检索
                 </button>

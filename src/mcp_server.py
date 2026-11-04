@@ -15,7 +15,7 @@ from skills.registry import call_tool
 
 mcp = MCPServer(
     "music-research",
-    instructions="检索小众录音的厂牌目录、专业乐评和公开网页。不查询百科，也不把豆瓣当作乐评。链接只能来自工具结果。",
+    instructions="为小众华语音乐检索公开网页、听众评论与发行目录。结论须来自工具返回的链接与正文，不查百科，不把豆瓣短评当作权威乐评。",
 )
 
 
