@@ -133,6 +133,16 @@ Markdown 报告写入 `src/output/`（已在 `.gitignore` 中排除，不进入�
 
 ---
 
+## 系统架构
+
+![vibe乐评 Web 版架构](docs/architecture.png)
+
+浏览器通过 SSE 调用 `web_app.py`，由 `loop.py` 编排多项 Skills 抓取外部数据；整理后的 JSON 与 `review_prompt.md` 一并交给 DeepSeek 生成乐评。同一套 Skills 亦可通过 MCP（`music-research`）或命令行 Function Calling 调用。
+
+重新生成架构图：`.venv\Scripts\python tools\draw_architecture.py`
+
+---
+
 ## 处理流程
 
 单次 Web 请求的执行顺序：
@@ -184,6 +194,14 @@ Web 主路径由 `src/loop.py` 中的 **编排循环** 按固定顺序调用技�
 ---
 
 ## 附录
+
+### 离线部署包
+
+目录 [`dist/`](dist/) 中的 **`vibecodingAI-deploy.zip`** 为可分发压缩包（含源码与文档，不含 `.venv`、`.env`、Git 与本地运行报告）。解压后阅读包内 **`DEPLOY.txt`**。需要重新打包时执行：
+
+```bash
+.venv\Scripts\python tools\pack_deploy.py
+```
 
 - 协议与 API：[`docs/literature/bibliography.md`](docs/literature/bibliography.md)  
 - 迭代指令记录：[`docs/ai乐评-有效prompt.md`](docs/ai乐评-有效prompt.md)  

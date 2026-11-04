@@ -52,6 +52,7 @@ src/data/inbox/
 data/processed/
 datasets/
 *.zip
+!dist/vibecodingAI-deploy.zip
 *.tar
 *.tar.gz
 *.tgz
@@ -74,6 +75,9 @@ desktop.ini
 # 单次运行报告（本地生成，不提交）
 src/output/*
 !src/output/.gitkeep
+
+# 课程实验报告 Word（本地填写，不提交）
+docs/*实验报告*.docx
 
 # UI 跑图 / 设计工具缓存（不影响运行）
 .taste-skill/
